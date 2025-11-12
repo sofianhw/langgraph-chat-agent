@@ -21,19 +21,35 @@ The agent processes user input through a stateful graph. Each message is re-clas
 
 ```mermaid
 graph TD
-    A[User Input] --> B{Guardrails};
-    B --> C{Intent Classifier};
-    C --> D{Payment Flow};
-    C --> E{FAQ (RAG) Flow};
-    C --> F{Inquiry Node};
-    C --> I{Chitchat Node};
-    C --> G{Clarification};
-    
-    G --> C;
-    D --> H[Audit & End];
-    E --> H;
-    F --> H;
-    I --> H;
+    subgraph "Core Agent Flow"
+        A[User Input] --> B{Guardrails};
+        B --> C{Intent Classifier};
+        C -- Matched Intent & No Pending Task --> D{Start New Task/Flow};
+        C -- Matched Intent & Pending Task --> E{Resume/Handle Interruption};
+        C -- No Match --> G{Clarification};
+        
+        D --> F[Task & Flow Execution];
+        E --> F;
+        F --> J[Update State & Check Pending Task];
+        J -- Task Complete --> K[Audit & End];
+        J -- Task Pending --> C;
+
+        G --> H[Generate 'Please Rephrase' Response];
+        H --> K;
+    end
+
+    subgraph "Task & Flow Nodes (Examples)"
+        direction LR
+        Payment[Payment Flow]
+        FAQ[FAQ/RAG Flow]
+        Inquiry[Inquiry Node]
+        Chitchat[Chitchat Node]
+    end
+
+    style D fill:#fff,stroke:#333,stroke-width:2px
+    style E fill:#fff,stroke:#333,stroke-width:2px
+    style F fill:#fff,stroke:#333,stroke-width:2px
+    style J fill:#fff,stroke:#333,stroke-width:2px
 ```
 
 ## Getting Started
@@ -112,6 +128,9 @@ The agent's behavior is almost entirely driven by external configuration files, 
 
 Here is an example demonstrating the agent's ability to handle interruptions:
 
+<details>
+<summary>Click to see the full conversation log</summary>
+
 ```
 Starting Conversational Banking Agent...
 You: i wanna transfer
@@ -131,3 +150,38 @@ Bot: What is the recipient's account number?
 You: 12345
 Bot: Transfer to anna of $10.0 at bca (account: 12345) confirmed. Your transaction succeeded.
 ```
+</details>
+
+### Example Flow Explained
+
+Let's break down a key part of that conversation to see how it maps to our Core Flow Diagram.
+
+**Turn 1: Starting the Payment Flow**
+> **You**: `i wanna transfer`
+
+1.  **[A] User Input**: The message enters the graph.
+2.  **[B] Guardrails**: The message is checked for safety.
+3.  **[C] Intent Classifier**: The intent is classified as `Transfer funds`.
+4.  **[D] Task & Flow Nodes**: The router sees the `Transfer funds` intent and sends the conversation to the **Payment Flow**.
+5.  **[E] Execute Task**: The `Payment Flow` node begins its execution. It knows from `flow.yaml` that it needs to collect the recipient's name first. It generates the question "Who do you want to send money to?" and adds it to the state.
+6.  **[F] Audit & End**: The state is logged, and the bot's response is displayed to the user. A `pending_task` for the payment is now active in the agent's memory (the `State` object).
+
+**Turn 2: The Interruption**
+> **You**: `what is my balance?`
+
+1.  **[A] User Input**: The new message enters the graph.
+2.  **[B] Guardrails**: The message is checked.
+3.  **[C] Intent Classifier**: The intent is classified as `INQUIRY`.
+4.  **[D] Task & Flow Nodes**: The router sees the `INQUIRY` intent. It also sees that there is a `pending_task` (the payment). It recognizes this as an interruption and routes the conversation to the **Inquiry Node**.
+5.  **[E] Execute Task**: The `Inquiry Node` executes. It fetches the user's balance, generates the answer, and updates the state.
+6.  **[F] Audit & End**: The state is logged, and the answer about the balance is displayed. The `pending_task` for the payment is still active in the agent's memory.
+
+**Turn 3: Resuming the Flow**
+> **You**: `okey transfer 10`
+
+1.  **[A] User Input**: The message enters the graph.
+2.  **[B] Guardrails**: The message is checked.
+3.  **[C] Intent Classifier**: The intent is classified as `Transfer funds` again.
+4.  **[D] Task & Flow Nodes**: The router sees the `Transfer funds` intent and the active `pending_task`. It knows the user is resuming the flow and routes back to the **Payment Flow**.
+5.  **[E] Execute Task**: The `Payment Flow` node resumes. It sees that the user has provided the amount (`10`) and now has all the information it needs for the next step: confirmation. It generates the confirmation message.
+6.  **[F] Audit & End**: The state is logged, and the confirmation prompt is displayed, seamlessly continuing the original task.
