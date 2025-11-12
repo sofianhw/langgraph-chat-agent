@@ -26,8 +26,9 @@ graph TD
     C --> D{Payment Flow};
     C --> E{FAQ (RAG) Flow};
     C --> F{Inquiry Node};
-    C --> G{Clarification};
     C --> I{Chitchat Node};
+    C --> G{Clarification};
+    
     G --> C;
     D --> H[Audit & End];
     E --> H;
