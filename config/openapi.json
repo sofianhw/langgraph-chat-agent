@@ -1,0 +1,48 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Simple Banking API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/transfer": {
+      "post": {
+        "summary": "Transfer funds",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipient_name": {
+                    "type": "string"
+                  },
+                  "bank_name": {
+                    "type": "string"
+                  },
+                  "account_number": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "reference": {
+                    "type": "string"
+                  }
+                },
+                "required": ["recipient_name", "bank_name", "account_number", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer successful"
+          }
+        },
+        "x-confirmation-fields": ["recipient_name", "amount"]
+      }
+    }
+  }
+}

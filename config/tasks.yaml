@@ -1,0 +1,18 @@
+tasks:
+  - name: INQUIRY
+    description: "Handles user inquiries about their account."
+    required_fields:
+      - inquiry_type
+    confirmation_required: false
+    inquiry_types:
+      - name: "balance"
+        description: "For questions about the user's current account balance."
+        aliases: ["my balance", "account balance", "how much money"]
+      - name: "remaining_transfer_limit"
+        description: "For questions about the user's remaining daily transfer limit."
+        aliases: ["remaining limit", "how much more can I send", "remaining transfer amount"]
+
+  - name: FAQ
+    description: "Answers general banking questions from a knowledge base."
+    required_fields: []
+    confirmation_required: false

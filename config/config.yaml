@@ -1,0 +1,10 @@
+banking:
+  transfer_limit_daily: 10000
+  aml_threshold: 250
+compliance:
+  require_confirmation_above: 250
+hooks:
+  pre:
+    - check_user_balance
+  post:
+    - log_audit_trail

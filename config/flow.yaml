@@ -1,0 +1,63 @@
+# config/flow.yaml
+
+# This section defines the primary routing rules based on classified intents.
+# It maps an intent to a specific flow or a direct node.
+routing_rules:
+  - intent: GREETING
+    target: greeting_node
+  - intent: FAQ
+    target: faq_handler_node # New generic node for FAQ
+  - intent: INQUIRY
+    target: inquiry_handler_node # New generic node for Inquiry
+  - intent: "Transfer funds" # Matches the task name from openapi.json
+    target: payment_flow # This points to a multi-step flow defined below
+  - intent: CLARIFICATION
+    target: clarification_node
+
+  # Conditional rules for CONFIRM/CANCEL when a task is pending
+  - intent: CONFIRM
+    target: payment_flow # Re-enters the payment flow to handle confirmation
+    conditions:
+      - pending_task
+  - intent: CANCEL
+    target: end_node # Ends the current turn/task
+    conditions:
+      - pending_task
+
+# This section defines complex, multi-step conversation flows.
+# Each flow is a sequence of generic nodes/steps.
+flows:
+  payment_flow:
+    start_node: collect_confirmation_fields # The entry point for this specific flow
+
+    nodes:
+      collect_confirmation_fields:
+        type: form_collection
+        fields_to_collect: ["recipient_name", "amount"] # These fields are looked up in TaskRegistry
+        on_complete:
+          target: ask_for_confirmation
+
+      ask_for_confirmation:
+        type: prompt
+        message: "Please confirm transfer to {recipient_name} of ${amount}. Approve or cancel?"
+        on_reply:
+          - intent: CONFIRM
+            target: collect_remaining_fields
+          - intent: CANCEL
+            target: end_flow
+
+      collect_remaining_fields:
+        type: form_collection
+        fields_to_collect: ["bank_name", "account_number"] # These fields are looked up in TaskRegistry
+        on_complete:
+          target: execute_payment
+
+      execute_payment:
+        type: execution
+        # In a real system, this would contain API call details.
+        # For now, it will just print a success message.
+        on_complete:
+          target: end_flow
+
+      end_flow:
+        type: end # Special node to signify the end of a flow/task
